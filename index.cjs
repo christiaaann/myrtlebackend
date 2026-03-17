@@ -50,18 +50,23 @@ app.post("/send-otp", async (req, res) => {
       attempts: 0
     });
 
-    // Get user info from Firestore
-    const usersRef = admin.firestore().collection("users");
-    const snapshot = await usersRef.where("email", "==", email).get();
+let userName = "User"; 
+const usersRef = admin.firestore().collection("users");
+const snapshot = await usersRef.where("email", "==", email).get();
 
-    // Default name if user not found
-    let userName = "User";
-    if (!snapshot.empty) {
-      const userData = snapshot.docs[0].data();
-      const firstName = userData.firstname || "";
-      const lastName = userData.lastname || "";
-      userName = `${firstName} ${lastName}`.trim() || "User";
-    }
+if (!snapshot.empty) {
+  const userData = snapshot.docs[0].data();
+
+  // Check top-level firstname/lastname first
+  if (userData.firstname || userData.lastname) {
+    userName = `${userData.firstname || ""} ${userData.lastname || ""}`.trim();
+  } 
+  // If not, check parent map
+  else if (userData.parent) {
+    const p = userData.parent;
+    userName = `${p.firstname || ""} ${p.lastname || ""}`.trim();
+  }
+}
 
     // Send OTP email via SendGrid
   await sgMail.send({
