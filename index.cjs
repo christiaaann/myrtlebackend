@@ -47,7 +47,7 @@ app.post("/send-otp", async (req, res) => {
 
     await sgMail.send({
       to: email,
-      from: "christianheje001@gmail.com",
+      from: "no-reply@tamanghula.online", 
       templateId: process.env.SENDGRID_TEMPLATE_ID,
       dynamic_template_data: { otp }
     });
