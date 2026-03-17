@@ -44,33 +44,41 @@ app.post("/send-otp", async (req, res) => {
     const expiresAt = Date.now() + 5 * 60 * 1000; // 5 mins
 
     // Save OTP in Firestore
-    await admin.firestore().doc(`passwordResets/${email}`).set({ otp, expiresAt, attempts: 0 });
+    await admin.firestore().doc(`passwordResets/${email}`).set({
+      otp,
+      expiresAt,
+      attempts: 0
+    });
 
-    // 🔹 Get user info from Firestore
+    // Get user info from Firestore
     const usersRef = admin.firestore().collection("users");
     const snapshot = await usersRef.where("email", "==", email).get();
 
-    let userName = "User"; 
+    // Default name if user not found
+    let userName = "User";
     if (!snapshot.empty) {
       const userData = snapshot.docs[0].data();
-      userName = `${userData.firstname} ${userData.lastname}`; 
+      const firstName = userData.firstname || "";
+      const lastName = userData.lastname || "";
+      userName = `${firstName} ${lastName}`.trim() || "User";
     }
 
-    // Send email via SendGrid
-    await sgMail.send({
-      to: email,
-      from: { email: "no-reply@tamanghula.online", name: "Myrtle School" },
-      templateId: process.env.SENDGRID_TEMPLATE_ID,
-      dynamic_template_data: { 
-        otp,
-        name: userName 
-      }
-    });
+    // Send OTP email via SendGrid
+  await sgMail.send({
+  to: email,
+  from: { email: "no-reply@tamanghula.online", name: "Myrtle School" },
+  subject: "Your Myrtle School Verification Code",
+  templateId: process.env.SENDGRID_TEMPLATE_ID,
+  dynamic_template_data: { 
+    otp,
+    name: userName
+  }
+});
 
     res.json({ message: "OTP sent successfully" });
   } catch (err) {
     console.log("SEND OTP ERROR:", err);
-    res.status(500).json({ message: "Error sending OTP." });
+    res.status(500).json({ message: "Error sending OTP" });
   }
 });
 
