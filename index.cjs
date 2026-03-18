@@ -138,5 +138,45 @@ app.post("/reset-password", async (req, res) => {
   }
 });
 
+app.post("/send-enrollment", async (req, res) => {
+  try {
+    const { studentID } = req.body;
+    if (!studentID) return res.status(400).json({ message: "studentID required" });
+
+    // === student record ===
+    const studentDoc = await admin.firestore().doc(`students/${studentID}`).get();
+    if (!studentDoc.exists) return res.status(404).json({ message: "Student not found" });
+
+    const studentData = studentDoc.data();
+    const parentUID = studentData.parentUID;
+
+    // === parent email mula sa users collection ====
+    const parentDoc = await admin.firestore().doc(`users/${parentUID}`).get();
+    if (!parentDoc.exists) return res.status(404).json({ message: "Parent user not found" });
+
+    const parentEmail = parentDoc.data().email;
+    if (!parentEmail) return res.status(400).json({ message: "Parent email not set" });
+
+    // SendGrid email
+    const htmlContent = `
+      <p>Hi,</p>
+      <p>Your child <strong>${studentData.firstname} ${studentData.lastname}</strong> has been <strong>ENROLLED</strong> for the school year <strong>${studentData.schoolYear}</strong>.</p>
+      <p>Thank you!</p>
+    `;
+
+    await sgMail.send({
+      to: parentEmail,
+      from: { email: "no-reply@tamanghula.online", name: "Myrtle School" },
+      subject: "Enrollment Approved ✅",
+      html: htmlContent,
+    });
+
+    res.json({ message: "Enrollment email sent." });
+  } catch (err) {
+    console.error("SEND ENROLLMENT EMAIL ERROR:", err);
+    res.status(500).json({ message: "Error sending enrollment email." });
+  }
+});
+
 // ---------------- START SERVER ----------------
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
