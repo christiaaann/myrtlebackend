@@ -138,6 +138,7 @@ app.post("/reset-password", async (req, res) => {
   }
 });
 
+//  ==== if child approved for enrollment parent SEND EMAIL NOTIFICATION ====
 app.post("/send-enrollment", async (req, res) => {
   try {
     const { studentID } = req.body;
@@ -157,18 +158,16 @@ app.post("/send-enrollment", async (req, res) => {
     const parentEmail = parentDoc.data().email;
     if (!parentEmail) return res.status(400).json({ message: "Parent email not set" });
 
-    // SendGrid email
-    const htmlContent = `
-      <p>Hi,</p>
-      <p>Your child <strong>${studentData.firstname} ${studentData.lastname}</strong> has been <strong>ENROLLED</strong> for the school year <strong>${studentData.schoolYear}</strong>.</p>
-      <p>Thank you!</p>
-    `;
-
     await sgMail.send({
       to: parentEmail,
       from: { email: "no-reply@tamanghula.online", name: "Myrtle School" },
-      subject: "Enrollment Approved ✅",
-      html: htmlContent,
+      subject: "Myrtle School Enrollment Confirmation",
+      templateId: process.env.SENDGRID_ENROLLMENT_TEMPLATE_ID,
+      dynamic_template_data: {
+        name: parentDoc.data().firstname || "Parent",
+        studentName: `${studentData.firstname || ""} ${studentData.lastname || ""}`.trim(),
+        schoolYear: studentData.schoolYear || "N/A"
+      }
     });
 
     res.json({ message: "Enrollment email sent." });
